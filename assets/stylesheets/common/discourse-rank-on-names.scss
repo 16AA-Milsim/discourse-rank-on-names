@@ -1,0 +1,32 @@
+.fk-d-tooltip__inner-content {
+  // Allow long prefixed usernames to render without trimming
+  overflow: visible;
+}
+
+.fk-d-tooltip__inner-content .sidebar-section-link-content-text,
+.fk-d-tooltip__inner-content
+  .sidebar-section-link
+  .sidebar-section-link-content-text,
+.fk-d-menu.sidebar-more-section-content .sidebar-section-link-content-text,
+.fk-d-menu.sidebar-more-section-content
+  .sidebar-section-link
+  .sidebar-section-link-content-text {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.user-card,
+.group-card {
+  --card-width: 42em;
+}
+
+.user-card {
+  .name-username-wrapper,
+  .names__primary,
+  .names__secondary {
+    white-space: wrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+}

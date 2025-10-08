@@ -60,11 +60,63 @@ export default {
       /**
        * Mirrors the rank prefix from a record into the shared cache.
        *
-       * @param {{username: string, rank_prefix?: string}} record
+       * @param {{username?: string, user?: unknown, rank_prefix?: string}} record
        * @returns {void}
        */
-      const syncFromUserRecord = (record) => {
-        rememberPrefix(record?.username, record?.[RANK_PREFIX_KEY]);
+      const syncFromUserRecord = (record, visited = new WeakSet()) => {
+        if (!record || typeof record !== "object") {
+          return;
+        }
+
+        if (visited.has(record)) {
+          return;
+        }
+
+        visited.add(record);
+
+        const nestedUser = record.user;
+
+        if (nestedUser && nestedUser !== record) {
+          syncFromUserRecord(nestedUser, visited);
+        }
+
+        if (typeof record.username === "string") {
+          rememberPrefix(record.username, record?.[RANK_PREFIX_KEY]);
+        }
+      };
+
+      const seedDirectoryCollection = (collection) => {
+        if (!collection) {
+          return;
+        }
+
+        const visitItem = (item) => {
+          if (!item) {
+            return;
+          }
+
+          const visited = new WeakSet();
+          syncFromUserRecord(item, visited);
+          syncFromUserRecord(item.user, visited);
+        };
+
+        if (Array.isArray(collection)) {
+          collection.forEach(visitItem);
+          return;
+        }
+
+        const content =
+          collection.content ||
+          collection.directoryItems ||
+          collection.directory_items ||
+          collection.models ||
+          collection.toArray?.();
+
+        if (Array.isArray(content)) {
+          content.forEach(visitItem);
+        } else if (typeof content?.forEach === "function") {
+          content.forEach(visitItem);
+        }
       };
 
       api.modifyClass("model:user", {
@@ -125,6 +177,49 @@ export default {
 
       const currentUser = api.getCurrentUser?.();
       syncFromUserRecord(currentUser);
+
+      api.modifyClass("service:store", {
+        pluginId: PLUGIN_ID,
+
+        _resultSet(type, result, findArgs) {
+          const resultSet = this._super(...arguments);
+
+          if (type === "directoryItem" && resultSet) {
+            seedDirectoryCollection(resultSet);
+          }
+
+          return resultSet;
+        },
+
+        appendResults(resultSet, type, url) {
+          const promise = this._super(...arguments);
+
+          if (type === "directoryItem") {
+            const finalize = () => seedDirectoryCollection(resultSet);
+
+            if (promise?.finally) {
+              return promise.finally(finalize);
+            }
+
+            if (promise?.then) {
+              return promise.then(
+                (value) => {
+                  finalize();
+                  return value;
+                },
+                (error) => {
+                  finalize();
+                  throw error;
+                }
+              );
+            }
+
+            finalize();
+          }
+
+          return promise;
+        },
+      });
     });
   },
 };

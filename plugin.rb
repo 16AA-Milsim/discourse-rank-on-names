@@ -3,8 +3,10 @@
 # name: discourse-rank-on-names
 # about: Prefix usernames with military rank abbreviations based on group membership
 # version: 0.1
-# authors: Codex
-# url: https://github.com/discourse/discourse
+# authors: Codex & Darojax
+# url: https://github.com/16AA-Milsim/discourse-rank-on-names
+
+register_asset "stylesheets/common/discourse-rank-on-names.scss"
 
 after_initialize do
   require_relative "lib/discourse_rank_on_names"
