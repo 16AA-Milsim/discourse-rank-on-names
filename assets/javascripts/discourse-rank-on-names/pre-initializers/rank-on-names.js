@@ -6,7 +6,6 @@ const RANK_PREFIX_KEY = "rank_prefix";
 const DROP_ZONE_KEY = "rank_drop_zone_flash";
 const prefixCache = Object.create(null);
 const dropZoneCache = Object.create(null);
-const dropZoneClassUrlMap = Object.create(null);
 const DEBUG = (() => {
   if (typeof window === "undefined") {
     return false;
@@ -59,10 +58,6 @@ function rememberDropZone(username, dropZone) {
   }
 
   const key = username.toLowerCase();
-  const previous = dropZoneCache[key];
-  const previousClass = previous?.css_class
-    ? `user-title--${previous.css_class}`
-    : null;
 
   if (dropZone === undefined) {
     return;
@@ -74,21 +69,6 @@ function rememberDropZone(username, dropZone) {
   } else {
     delete dropZoneCache[key];
     log("forget drop zone", username);
-  }
-
-  const nextClass = dropZone?.css_class
-    ? `user-title--${dropZone.css_class}`
-    : null;
-  const nextUrl = dropZone?.upload_url ? getURLWithCDN(dropZone.upload_url) : null;
-
-  if (previousClass && previousClass !== nextClass) {
-    delete dropZoneClassUrlMap[previousClass];
-  }
-
-  if (nextClass && nextUrl) {
-    dropZoneClassUrlMap[nextClass] = nextUrl;
-  } else if (nextClass && !nextUrl) {
-    delete dropZoneClassUrlMap[nextClass];
   }
 
   scheduleApplyDropZoneBadges();
@@ -141,14 +121,12 @@ function applyDropZoneStyles(list) {
   };
 
   if (!Array.isArray(list) || list.length === 0) {
-    clearDropZoneClassMap();
     removeExisting();
     scheduleApplyDropZoneBadges();
     return;
   }
 
   const rules = [];
-  clearDropZoneClassMap();
 
   list.forEach((item) => {
     const url = item?.upload_url;
@@ -167,12 +145,7 @@ function applyDropZoneStyles(list) {
     const resolvedUrl = getURLWithCDN(url);
     const encodedUrl = JSON.stringify(resolvedUrl);
 
-    dropZoneClassUrlMap[className] = resolvedUrl;
-
-    rules.push(
-      `.user-title.${escaped} { position: relative; padding-left: 22px; }
-.user-title.${escaped}::before { content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; background-image: url(${encodedUrl}); background-size: contain; background-repeat: no-repeat; background-position: center; }`
-    );
+    rules.push(`.user-title.${escaped} { --rank-on-names-badge: url(${encodedUrl}); }`);
   });
 
   if (!rules.length) {
@@ -199,22 +172,36 @@ function applyDropZoneStyles(list) {
   scheduleApplyDropZoneBadges();
 }
 
-function clearDropZoneClassMap() {
-  Object.keys(dropZoneClassUrlMap).forEach((key) => delete dropZoneClassUrlMap[key]);
-}
-
 function applyDropZoneBadgesWithin(root) {
   if (!root?.querySelectorAll) {
     return;
   }
 
-  for (const [className, url] of Object.entries(dropZoneClassUrlMap)) {
-    root
-      .querySelectorAll(`.user-title.${className}`)
-      .forEach((element) => {
-        element.style.setProperty("--rank-on-names-badge", `url("${url}")`);
-      });
-  }
+  root.querySelectorAll(".names").forEach((namesElement) => {
+    const userLink = namesElement.querySelector("[data-user-card]");
+    const username = userLink?.dataset?.userCard;
+    if (!username) {
+      return;
+    }
+
+    const titleElement = namesElement.querySelector(".user-title");
+    if (!titleElement) {
+      return;
+    }
+
+    const dropZone = lookupDropZone(username);
+    if (dropZone?.upload_url) {
+      const resolvedUrl = getURLWithCDN(dropZone.upload_url);
+      titleElement.style.setProperty(
+        "--rank-on-names-badge",
+        `url("${resolvedUrl}")`
+      );
+      titleElement.classList.add("rank-on-names-has-badge");
+    } else {
+      titleElement.classList.remove("rank-on-names-has-badge");
+      titleElement.style.removeProperty("--rank-on-names-badge");
+    }
+  });
 }
 
 let dropZoneBadgeApplyScheduled = false;
@@ -461,6 +448,8 @@ export default {
           subtree: true,
         });
       }
+
+      scheduleApplyDropZoneBadges();
 
       api.registerValueTransformer(
         "poster-name-class",

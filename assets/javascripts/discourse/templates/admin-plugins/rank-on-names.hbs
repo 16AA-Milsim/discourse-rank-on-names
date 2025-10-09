@@ -165,6 +165,7 @@
                       "input"
                       (fn this.updateDropZoneEditField flash.id "group_name")
                     }}
+                    {{on "keydown" this.stopDeletePropagation}}
                   />
                 </td>
                 <td>
@@ -187,6 +188,7 @@
                       "input"
                       (fn this.updateDropZoneEditField flash.id "position")
                     }}
+                    {{on "keydown" this.stopDeletePropagation}}
                   />
                 </td>
                 <td class="rank-on-names-admin__actions">
@@ -255,6 +257,7 @@
         @type="text"
         class="input-small"
         placeholder={{i18n "rank_on_names.group_placeholder"}}
+        {{on "keydown" this.stopDeletePropagation}}
       />
       <Input
         @value={{this.newDropZonePosition}}
@@ -262,6 +265,7 @@
         class="input-small"
         min="1"
         placeholder={{i18n "rank_on_names.position_placeholder"}}
+        {{on "keydown" this.stopDeletePropagation}}
       />
       <DropZoneFlashUpload
         @upload={{this.newDropZoneUpload}}

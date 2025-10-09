@@ -35,12 +35,12 @@
   }
 }
 
-.user-title[class*="user-title--"] {
+.user-title.rank-on-names-has-badge {
   position: relative;
   padding-left: 22px;
 }
 
-.user-title[class*="user-title--"]::before {
+.user-title.rank-on-names-has-badge::before {
   content: "";
   position: absolute;
   left: 0;

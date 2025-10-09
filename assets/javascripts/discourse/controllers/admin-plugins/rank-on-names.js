@@ -160,6 +160,13 @@ export default class AdminPluginsRankOnNamesController extends Controller {
   }
 
   @action
+  stopDeletePropagation(event) {
+    if (event?.key === "Delete" || event?.key === "Backspace") {
+      event.stopPropagation();
+    }
+  }
+
+  @action
   startEdit(id) {
     const current = this.#findPrefix(id);
     if (!current) {
