@@ -8,6 +8,7 @@ module ::DiscourseRankOnNames
     end
 
     def create
+      ensure_enabled!
       prefix = Prefix.new(prefix_params)
 
       if prefix.save
@@ -18,6 +19,7 @@ module ::DiscourseRankOnNames
     end
 
     def update
+      ensure_enabled!
       prefix = find_prefix
 
       if prefix.update(prefix_params)
@@ -28,11 +30,16 @@ module ::DiscourseRankOnNames
     end
 
     def destroy
+      ensure_enabled!
       find_prefix.destroy!
       render_json_dump(success: true)
     end
 
     private
+
+    def ensure_enabled!
+      raise Discourse::InvalidAccess unless SiteSetting.rank_on_names_enabled
+    end
 
     def find_prefix
       Prefix.find(params[:id])

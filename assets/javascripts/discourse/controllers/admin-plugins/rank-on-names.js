@@ -12,7 +12,10 @@ export default class AdminPluginsRankOnNamesController extends Controller {
   @tracked newPosition = "";
   @tracked isSavingNew = false;
 
-  setInitialModel(prefixes) {
+  @tracked disabled = false;
+
+  setInitialModel(prefixes, disabled = false) {
+    this.disabled = disabled;
     this.prefixes = this.#sortPrefixes(prefixes || []);
   }
 
@@ -27,8 +30,8 @@ export default class AdminPluginsRankOnNamesController extends Controller {
     });
   }
 
-  #refresh() {
-    this.prefixes = this.#sortPrefixes(this.prefixes);
+  #setPrefixes(prefixes) {
+    this.prefixes = this.#sortPrefixes(prefixes);
   }
 
   #normalizePosition(value) {
@@ -40,44 +43,71 @@ export default class AdminPluginsRankOnNamesController extends Controller {
     return Number.isNaN(parsed) ? null : parsed;
   }
 
-  @action
-  startEdit(prefix) {
-    prefix._edit = {
-      group_name: prefix.group_name,
-      prefix: prefix.prefix,
-      position: prefix.position,
-    };
-    prefix.isEditing = true;
-    this.#refresh();
+  #findPrefix(id) {
+    return this.prefixes.find((item) => item.id === id);
+  }
+
+  #replacePrefix(id, updater) {
+    this.prefixes = this.#sortPrefixes(
+      this.prefixes.map((item) => {
+        if (item.id !== id) {
+          return item;
+        }
+        const updated = typeof updater === "function" ? updater(item) : updater;
+        return { ...item, ...updated };
+      })
+    );
   }
 
   @action
-  cancelEdit(prefix) {
-    delete prefix._edit;
-    prefix.isEditing = false;
-    this.#refresh();
-  }
-
-  @action
-  updateEditField(prefix, field, event) {
-    if (!prefix._edit) {
+  startEdit(id) {
+    const current = this.#findPrefix(id);
+    if (!current) {
       return;
     }
 
-    prefix._edit[field] = event?.target?.value;
-    this.#refresh();
+    this.#replacePrefix(id, {
+      isEditing: true,
+      _edit: {
+        group_name: current.group_name,
+        prefix: current.prefix,
+        position: current.position,
+      },
+    });
   }
 
   @action
-  async saveEdit(prefix) {
-    if (!prefix._edit) {
+  cancelEdit(id) {
+    this.#replacePrefix(id, {
+      isEditing: false,
+      _edit: null,
+    });
+  }
+
+  @action
+  updateEditField(id, field, event) {
+    const value = event?.target?.value;
+    const current = this.#findPrefix(id);
+    if (!current?._edit) {
+      return;
+    }
+
+    this.#replacePrefix(id, (item) => ({
+      _edit: { ...item._edit, [field]: value },
+    }));
+  }
+
+  @action
+  async saveEdit(id) {
+    const current = this.#findPrefix(id);
+    if (!current?._edit) {
       return;
     }
 
     const payload = {
-      group_name: prefix._edit.group_name?.trim(),
-      prefix: prefix._edit.prefix?.trim(),
-      position: this.#normalizePosition(prefix._edit.position),
+      group_name: current._edit.group_name?.trim(),
+      prefix: current._edit.prefix?.trim(),
+      position: this.#normalizePosition(current._edit.position),
     };
 
     if (!payload.group_name || !payload.prefix) {
@@ -89,36 +119,43 @@ export default class AdminPluginsRankOnNamesController extends Controller {
 
     try {
       const updated = await ajax(
-        `/admin/plugins/rank-on-names/prefixes/${prefix.id}.json`,
+        `/admin/plugins/rank-on-names/prefixes/${id}.json`,
         {
           type: "PUT",
           data: { prefix: payload },
         }
       );
 
-      Object.assign(prefix, updated, { isEditing: false });
-      delete prefix._edit;
-      this.#refresh();
+      this.#replacePrefix(id, {
+        ...updated,
+        isEditing: false,
+        _edit: null,
+      });
     } catch (error) {
       popupAjaxError(error);
     }
   }
 
   @action
-  async deletePrefix(prefix) {
+  async deletePrefix(id) {
+    const current = this.#findPrefix(id);
+    if (!current) {
+      return;
+    }
+
     if (
       !window.confirm(
-        I18n.t("rank_on_names.delete_confirm", { group: prefix.group_name })
+        I18n.t("rank_on_names.delete_confirm", { group: current.group_name })
       )
     ) {
       return;
     }
 
     try {
-      await ajax(`/admin/plugins/rank-on-names/prefixes/${prefix.id}.json`, {
+      await ajax(`/admin/plugins/rank-on-names/prefixes/${id}.json`, {
         type: "DELETE",
       });
-      this.prefixes = this.prefixes.filter((item) => item.id !== prefix.id);
+      this.#setPrefixes(this.prefixes.filter((item) => item.id !== id));
     } catch (error) {
       popupAjaxError(error);
     }
@@ -142,15 +179,12 @@ export default class AdminPluginsRankOnNamesController extends Controller {
     this.isSavingNew = true;
 
     try {
-      const created = await ajax(
-        "/admin/plugins/rank-on-names/prefixes.json",
-        {
-          type: "POST",
-          data: { prefix: payload },
-        }
-      );
+      const created = await ajax("/admin/plugins/rank-on-names/prefixes.json", {
+        type: "POST",
+        data: { prefix: payload },
+      });
 
-      this.prefixes = this.#sortPrefixes([...this.prefixes, created]);
+      this.#setPrefixes([...this.prefixes, created]);
       this.newGroupName = "";
       this.newPrefix = "";
       this.newPosition = "";

@@ -1,6 +1,18 @@
 # frozen_string_literal: true
 
 module ::DiscourseRankOnNames
+  LOG_PREFIX = "[RankOnNames]".freeze
+  DEBUG_LOGGING = ENV["RANK_ON_NAMES_DEBUG"] == "1"
+
+  def log(message, payload = nil)
+    return unless DEBUG_LOGGING
+
+    Rails.logger.debug do
+      msg = "#{LOG_PREFIX} #{message}"
+      payload ? "#{msg} -- #{payload.inspect}" : msg
+    end
+  end
+
   DEFAULT_GROUP_PREFIXES = {
     "Major" => "Maj",
     "Captain" => "Capt",
@@ -35,13 +47,18 @@ module ::DiscourseRankOnNames
 
   module_function
 
+  module_function :log
+
   def clear_cache!
+    log("clear_cache requested")
     keys = Discourse.cache.keys("#{CACHE_NAMESPACE}:*")
     keys << prefix_list_cache_key unless keys.include?(prefix_list_cache_key)
     return if keys.empty?
 
+    log("clear_cache keys", keys: keys)
+
     Discourse.redis.pipelined do |pipeline|
-      keys.each { |key| pipeline.del(key) }
+      keys.each { |cache_key| pipeline.del(cache_key) }
     end
   end
 
@@ -57,14 +74,18 @@ module ::DiscourseRankOnNames
   end
 
   def prefix_for_user(user)
+    return nil unless enabled?
+
     user_id = extract_user_id(user)
     return nil if user_id.blank?
 
+    log("prefix_for_user", user_id: user_id)
     Discourse.cache.fetch(cache_key(user_id)) { select_prefix(group_names_for_user(user_id)) }
   end
 
   def group_names_for_user(user_id)
-    names_of_interest = ordered_prefixes.map(&:first)
+    names_of_interest = enabled? ? ordered_prefixes.map(&:first) : []
+    log("group_names_for_user", user_id: user_id, names_of_interest: names_of_interest)
     return [] if names_of_interest.empty?
 
     GroupUser
@@ -73,10 +94,19 @@ module ::DiscourseRankOnNames
       .pluck("groups.name")
   end
 
+  def enabled?
+    enabled = SiteSetting.rank_on_names_enabled
+    log("enabled?", enabled: enabled)
+    enabled
+  end
+
   def select_prefix(group_names)
+    log("select_prefix", group_names: group_names)
     ordered_prefixes.each do |group_name, prefix|
       return prefix if group_names.include?(group_name)
     end
+
+    log("select_prefix miss", group_names: group_names)
 
     nil
   end
@@ -94,7 +124,10 @@ module ::DiscourseRankOnNames
 
   def ordered_prefixes
     Discourse.cache.fetch(prefix_list_cache_key) do
-      ::DiscourseRankOnNames::Prefix.ordered.pluck(:group_name, :prefix)
+      prefixes = ::DiscourseRankOnNames::Prefix.ordered.pluck(:group_name, :prefix)
+      prefixes = DEFAULT_GROUP_PREFIXES.to_a if prefixes.blank?
+      log("ordered_prefixes", prefixes: prefixes)
+      prefixes
     end
   end
 

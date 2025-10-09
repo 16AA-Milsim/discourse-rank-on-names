@@ -9,6 +9,8 @@
 register_asset "stylesheets/common/discourse-rank-on-names.scss"
 add_admin_route "rank_on_names.title", "rank-on-names"
 
+enabled_site_setting :rank_on_names_enabled
+
 root_path = File.expand_path("..", __FILE__)
 
 after_initialize do
@@ -47,4 +49,10 @@ after_initialize do
 
   DiscourseEvent.on(:user_added_to_group, &group_change_handler)
   DiscourseEvent.on(:user_removed_from_group, &group_change_handler)
+
+  DiscourseEvent.on(:site_setting_changed) do |name, _old_value, _new_value|
+    next unless name.to_sym == :rank_on_names_enabled
+
+    ::DiscourseRankOnNames.clear_cache!
+  end
 end

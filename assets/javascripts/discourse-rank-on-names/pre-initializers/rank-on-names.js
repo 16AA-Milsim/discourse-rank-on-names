@@ -3,14 +3,31 @@ import { withPluginApi } from "discourse/lib/plugin-api";
 const PLUGIN_ID = "discourse-rank-on-names";
 const RANK_PREFIX_KEY = "rank_prefix";
 const prefixCache = Object.create(null);
+const DEBUG = (() => {
+  if (typeof window === "undefined") {
+    return false;
+  }
 
-/**
- * Stores the provided prefix in the cache for the supplied username.
- *
- * @param {string} username
- * @param {string|undefined|null} prefix
- * @returns {void}
- */
+  if (window.rankOnNamesDebug !== undefined) {
+    return Boolean(window.rankOnNamesDebug);
+  }
+
+  try {
+    return window.localStorage?.getItem("rankOnNamesDebug") === "true";
+  } catch (e) {
+    return false;
+  }
+})();
+const LOG_PREFIX = "[RankOnNames]";
+
+function log(...args) {
+  if (!DEBUG) {
+    return;
+  }
+  // eslint-disable-next-line no-console
+  console.debug(LOG_PREFIX, ...args);
+}
+
 function rememberPrefix(username, prefix) {
   if (!username) {
     return;
@@ -24,51 +41,45 @@ function rememberPrefix(username, prefix) {
 
   if (prefix) {
     prefixCache[key] = prefix;
+    log("remember", username, prefix);
   } else {
     delete prefixCache[key];
+    log("forget", username);
   }
 }
 
-/**
- * Returns a prefix string for the provided username if one exists.
- *
- * @param {string} username
- * @returns {string|undefined}
- */
 function lookupPrefix(username) {
   if (!username) {
     return undefined;
   }
 
-  return prefixCache[username.toLowerCase()];
+  const value = prefixCache[username.toLowerCase()];
+  log("lookup", username, value);
+  return value;
 }
 
 export default {
   name: "rank-on-names",
   before: "inject-discourse-objects",
 
-  /**
-   * Registers hooks that keep the rank prefix cache synchronized and ensures
-   * usernames are formatted with their associated prefixes.
-   *
-   * @returns {void}
-   */
   initialize() {
     withPluginApi((api) => {
+      log("initializer invoked", api?.siteSettings?.rank_on_names_enabled);
+      if (api?.siteSettings?.rank_on_names_enabled === false) {
+        log("initializer aborted: setting disabled");
+        return;
+      }
+
       api.addTrackedPostProperties(RANK_PREFIX_KEY);
 
-      /**
-       * Mirrors the rank prefix from a record into the shared cache.
-       *
-       * @param {{username?: string, user?: unknown, rank_prefix?: string}} record
-       * @returns {void}
-       */
       const syncFromUserRecord = (record, visited = new WeakSet()) => {
         if (!record || typeof record !== "object") {
+          log("sync skip invalid", record);
           return;
         }
 
         if (visited.has(record)) {
+          log("sync skip visited", record?.username || record);
           return;
         }
 
@@ -92,6 +103,7 @@ export default {
 
         const visitItem = (item) => {
           if (!item) {
+            log("seed skip empty item");
             return;
           }
 
@@ -101,6 +113,7 @@ export default {
         };
 
         if (Array.isArray(collection)) {
+          log("seed array", collection.length);
           collection.forEach(visitItem);
           return;
         }
@@ -113,8 +126,10 @@ export default {
           collection.toArray?.();
 
         if (Array.isArray(content)) {
+          log("seed content array", content.length);
           content.forEach(visitItem);
         } else if (typeof content?.forEach === "function") {
+          log("seed content iterable");
           content.forEach(visitItem);
         }
       };
@@ -136,6 +151,7 @@ export default {
         },
 
         rankOnNamesSyncCache() {
+          log("user sync", this?.username);
           syncFromUserRecord(this);
         },
       });
@@ -157,25 +173,30 @@ export default {
         },
 
         rankOnNamesSyncCache() {
+          log("post sync", this?.username);
           rememberPrefix(this.username, this[RANK_PREFIX_KEY]);
         },
       });
 
       api.formatUsername((username) => {
         if (!username) {
+          log("format empty");
           return "";
         }
 
         const prefix = lookupPrefix(username);
 
         if (prefix) {
+          log("format hit", username, prefix);
           return `${prefix} ${username}`;
         }
 
+        log("format miss", username);
         return username;
       });
 
       const currentUser = api.getCurrentUser?.();
+      log("sync current user", currentUser?.username);
       syncFromUserRecord(currentUser);
 
       api.modifyClass("service:store", {
@@ -185,6 +206,7 @@ export default {
           const resultSet = this._super(...arguments);
 
           if (type === "directoryItem" && resultSet) {
+            log("seed via resultSet", type);
             seedDirectoryCollection(resultSet);
           }
 
@@ -198,10 +220,12 @@ export default {
             const finalize = () => seedDirectoryCollection(resultSet);
 
             if (promise?.finally) {
+              log("appendResults finally", type);
               return promise.finally(finalize);
             }
 
             if (promise?.then) {
+              log("appendResults then", type);
               return promise.then(
                 (value) => {
                   finalize();
@@ -217,9 +241,12 @@ export default {
             finalize();
           }
 
+          log("appendResults passthrough", type);
           return promise;
         },
       });
+
+      log("initializer complete");
     });
   },
 };

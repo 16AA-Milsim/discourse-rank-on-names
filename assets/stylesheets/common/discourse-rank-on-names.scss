@@ -18,7 +18,7 @@
 
 .user-card,
 .group-card {
-  --card-width: 42em;
+  --card-width: 41em;
 }
 
 .user-card {
@@ -26,8 +26,12 @@
   .names__primary,
   .names__secondary {
     white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    max-width: 100%;
   }
 }
 

@@ -1,13 +1,17 @@
-import Route from "@ember/routing/route";
+import DiscourseRoute from "discourse/routes/discourse";
 import { ajax } from "discourse/lib/ajax";
 
-export default class AdminPluginsRankOnNamesRoute extends Route {
+export default class AdminPluginsRankOnNamesRoute extends DiscourseRoute {
   model() {
+    if (!this.currentUser?.admin || !this.siteSettings.rank_on_names_enabled) {
+      return { prefixes: [], disabled: true };
+    }
+
     return ajax("/admin/plugins/rank-on-names/prefixes.json");
   }
 
   setupController(controller, model) {
     super.setupController(controller, model);
-    controller.setInitialModel(model.prefixes);
+    controller.setInitialModel(model.prefixes, model.disabled);
   }
 }

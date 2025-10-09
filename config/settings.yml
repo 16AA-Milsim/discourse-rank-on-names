@@ -1,0 +1,4 @@
+plugins:
+  rank_on_names_enabled:
+    default: true
+    client: true
