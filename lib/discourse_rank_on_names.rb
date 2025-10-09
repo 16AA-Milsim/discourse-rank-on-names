@@ -43,7 +43,8 @@ module ::DiscourseRankOnNames
     "Sergeant_Aircrew" => "SAcr",
   }.freeze
 
-  CACHE_NAMESPACE = "rank_on_names:prefix".freeze
+  PREFIX_CACHE_NAMESPACE = "rank_on_names:prefix".freeze
+  DROP_ZONE_CACHE_NAMESPACE = "rank_on_names:drop_zone".freeze
 
   module_function
 
@@ -51,8 +52,13 @@ module ::DiscourseRankOnNames
 
   def clear_cache!
     log("clear_cache requested")
-    keys = Discourse.cache.keys("#{CACHE_NAMESPACE}:*")
+    keys = []
+    [PREFIX_CACHE_NAMESPACE, DROP_ZONE_CACHE_NAMESPACE].each do |namespace|
+      keys.concat(Discourse.cache.keys("#{namespace}:*"))
+    end
+    keys.uniq!
     keys << prefix_list_cache_key unless keys.include?(prefix_list_cache_key)
+    keys << drop_zone_list_cache_key unless keys.include?(drop_zone_list_cache_key)
     return if keys.empty?
 
     log("clear_cache keys", keys: keys)
@@ -84,7 +90,12 @@ module ::DiscourseRankOnNames
   end
 
   def group_names_for_user(user_id)
-    names_of_interest = enabled? ? ordered_prefixes.map(&:first) : []
+    names_of_interest = []
+    if enabled?
+      names_of_interest.concat(ordered_prefixes.map(&:first))
+      names_of_interest.concat(ordered_drop_zone_flash_payload.map { |flash| flash[:group_name] })
+    end
+    names_of_interest.uniq!
     log("group_names_for_user", user_id: user_id, names_of_interest: names_of_interest)
     return [] if names_of_interest.empty?
 
@@ -116,10 +127,11 @@ module ::DiscourseRankOnNames
     return if user_id.blank?
 
     Discourse.cache.delete(cache_key(user_id))
+    Discourse.cache.delete(drop_zone_cache_key(user_id))
   end
 
   def cache_key(user_id)
-    "#{CACHE_NAMESPACE}:#{user_id}"
+    "#{PREFIX_CACHE_NAMESPACE}:#{user_id}"
   end
 
   def ordered_prefixes
@@ -132,7 +144,73 @@ module ::DiscourseRankOnNames
   end
 
   def prefix_list_cache_key
-    "#{CACHE_NAMESPACE}:list"
+    "#{PREFIX_CACHE_NAMESPACE}:list"
+  end
+
+  def ordered_drop_zone_flash_payload
+    return [] unless enabled?
+
+    Discourse.cache.fetch(drop_zone_list_cache_key) do
+      ::DiscourseRankOnNames::DropZoneFlash.includes(:upload).ordered.map do |flash|
+        css_class = css_class_for_group_name(flash.group_name)
+        {
+          id: flash.id,
+          group_name: flash.group_name,
+          position: flash.position,
+          upload_id: flash.upload_id,
+          upload_url: flash.upload&.url,
+          css_class: css_class,
+        }
+      end
+    end
+  end
+
+  def site_drop_zone_flashes
+    return [] unless enabled?
+
+    ordered_drop_zone_flash_payload.map do |flash|
+      flash.slice(:id, :group_name, :position, :css_class, :upload_url)
+    end
+  end
+
+  def drop_zone_flash_for_user(user)
+    return nil unless enabled?
+
+    user_id = extract_user_id(user)
+    return nil if user_id.blank?
+
+    log("drop_zone_flash_for_user", user_id: user_id)
+    Discourse.cache.fetch(drop_zone_cache_key(user_id)) do
+      select_drop_zone_flash(group_names_for_user(user_id))
+    end
+  end
+
+  def drop_zone_cache_key(user_id)
+    "#{DROP_ZONE_CACHE_NAMESPACE}:#{user_id}"
+  end
+
+  def drop_zone_list_cache_key
+    "#{DROP_ZONE_CACHE_NAMESPACE}:list"
+  end
+
+  def select_drop_zone_flash(group_names)
+    log("select_drop_zone_flash", group_names: group_names)
+    ordered_drop_zone_flash_payload.each do |flash|
+      return flash.slice(:group_name, :css_class, :upload_url, :id, :position) if group_names.include?(flash[:group_name])
+    end
+
+    log("select_drop_zone_flash miss", group_names: group_names)
+    nil
+  end
+
+  def css_class_for_group_name(name)
+    return "" if name.blank?
+
+    name
+      .to_s
+      .strip
+      .gsub(/\s+/, "-")
+      .downcase
   end
 
   def extract_user_from_basic_serializer_object(object)

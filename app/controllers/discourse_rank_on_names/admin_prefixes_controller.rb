@@ -4,7 +4,12 @@ module ::DiscourseRankOnNames
   class AdminPrefixesController < ::Admin::AdminController
     def index
       prefixes = Prefix.ordered
-      render_json_dump(prefixes: serialize_data(prefixes, PrefixSerializer))
+      drop_zone_flashes = DropZoneFlash.includes(:upload).ordered
+      render_json_dump(
+        prefixes: serialize_data(prefixes, PrefixSerializer),
+        drop_zone_flashes:
+          serialize_data(drop_zone_flashes, DropZoneFlashSerializer)
+      )
     end
 
     def create

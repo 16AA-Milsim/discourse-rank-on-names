@@ -128,4 +128,155 @@
       />
     </div>
   </div>
+
+  <hr class="rank-on-names-admin__divider" />
+
+  <h2>{{i18n "rank_on_names.drop_zone.heading"}}</h2>
+  <p class="rank-on-names-admin__description">
+    {{i18n "rank_on_names.drop_zone.description"}}
+  </p>
+
+  <div class="table-container">
+    <table class="table rank-on-names-admin__table">
+      <thead>
+        <tr>
+          <th>{{i18n "rank_on_names.group_name"}}</th>
+          <th>{{i18n "rank_on_names.drop_zone.image"}}</th>
+          <th class="rank-on-names-admin__position">
+            {{i18n "rank_on_names.position"}}
+          </th>
+          <th class="rank-on-names-admin__actions">
+            {{i18n "rank_on_names.actions"}}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#if this.dropZoneFlashes.length}}
+          {{#each this.dropZoneFlashes as |flash|}}
+            <tr>
+              {{#if flash.isEditing}}
+                <td>
+                  <Input
+                    @value={{flash._edit.group_name}}
+                    @type="text"
+                    class="input-small"
+                    placeholder={{i18n "rank_on_names.group_placeholder"}}
+                    {{on
+                      "input"
+                      (fn this.updateDropZoneEditField flash.id "group_name")
+                    }}
+                  />
+                </td>
+                <td>
+                  <DropZoneFlashUpload
+                    @upload={{flash._edit.upload}}
+                    @groupName={{flash._edit.group_name}}
+                    @onUpload={{fn this.setDropZoneEditUpload flash.id}}
+                    @onRemove={{fn this.clearDropZoneEditUpload flash.id}}
+                    @onUploadError={{this.handleDropZoneUploadError}}
+                    @disabled={{this.disabled}}
+                  />
+                </td>
+                <td>
+                  <Input
+                    @value={{flash._edit.position}}
+                    @type="number"
+                    class="input-small"
+                    min="1"
+                    {{on
+                      "input"
+                      (fn this.updateDropZoneEditField flash.id "position")
+                    }}
+                  />
+                </td>
+                <td class="rank-on-names-admin__actions">
+                  <DButton
+                    @action={{fn this.saveDropZoneEdit flash.id}}
+                    @label="rank_on_names.save"
+                    @buttonClass="btn-primary btn-small"
+                  />
+                  <DButton
+                    @action={{fn this.cancelDropZoneEdit flash.id}}
+                    @label="rank_on_names.cancel"
+                    @buttonClass="btn-small"
+                  />
+                </td>
+              {{else}}
+                <td>{{flash.group_name}}</td>
+                <td>
+                  {{#if flash.upload_url}}
+                    <img
+                      src={{flash.preview_url}}
+                      alt={{i18n
+                        "rank_on_names.drop_zone.preview_alt"
+                        group=flash.group_name
+                      }}
+                      width="16"
+                      height="16"
+                      class="rank-on-names-admin__dzf-preview"
+                    />
+                  {{else}}
+                    <span class="rank-on-names-admin__dzf-placeholder">—</span>
+                  {{/if}}
+                </td>
+                <td>{{flash.position}}</td>
+                <td class="rank-on-names-admin__actions">
+                  <DButton
+                    @action={{fn this.startDropZoneEdit flash.id}}
+                    @label="rank_on_names.edit"
+                    @buttonClass="btn-small"
+                  />
+                  <DButton
+                    @action={{fn this.deleteDropZoneFlash flash.id}}
+                    @label="rank_on_names.delete"
+                    @buttonClass="btn-danger btn-small"
+                    @icon="trash-can"
+                  />
+                </td>
+              {{/if}}
+            </tr>
+          {{/each}}
+        {{else}}
+          <tr>
+            <td colspan="4" class="rank-on-names-admin__empty">
+              {{i18n "rank_on_names.drop_zone.empty"}}
+            </td>
+          </tr>
+        {{/if}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rank-on-names-admin__dzf-new">
+    <h3>{{i18n "rank_on_names.drop_zone.add_heading"}}</h3>
+    <div class="rank-on-names-admin__dzf-grid">
+      <Input
+        @value={{this.newDropZoneGroupName}}
+        @type="text"
+        class="input-small"
+        placeholder={{i18n "rank_on_names.group_placeholder"}}
+      />
+      <Input
+        @value={{this.newDropZonePosition}}
+        @type="number"
+        class="input-small"
+        min="1"
+        placeholder={{i18n "rank_on_names.position_placeholder"}}
+      />
+      <DropZoneFlashUpload
+        @upload={{this.newDropZoneUpload}}
+        @groupName={{this.newDropZoneGroupName}}
+        @onUpload={{this.setNewDropZoneUpload}}
+        @onRemove={{this.clearNewDropZoneUpload}}
+        @onUploadError={{this.handleDropZoneUploadError}}
+        @disabled={{this.disabled}}
+      />
+      <DButton
+        @action={{this.createDropZoneFlash}}
+        @label="rank_on_names.drop_zone.add"
+        @buttonClass="btn-primary"
+        @disabled={{or this.isSavingDropZone this.disabled}}
+      />
+    </div>
+  </div>
 </div>

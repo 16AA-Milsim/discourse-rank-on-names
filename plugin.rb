@@ -16,8 +16,11 @@ root_path = File.expand_path("..", __FILE__)
 after_initialize do
   require_relative "lib/discourse_rank_on_names"
   require_relative "app/models/discourse_rank_on_names/prefix"
+  require_relative "app/models/discourse_rank_on_names/drop_zone_flash"
   require_relative "app/serializers/discourse_rank_on_names/prefix_serializer"
+  require_relative "app/serializers/discourse_rank_on_names/drop_zone_flash_serializer"
   require_relative "app/controllers/discourse_rank_on_names/admin_prefixes_controller"
+  require_relative "app/controllers/discourse_rank_on_names/admin_drop_zone_flashes_controller"
 
   Discourse::Application.routes.append do
     namespace :admin, constraints: StaffConstraint.new do
@@ -28,6 +31,10 @@ after_initialize do
         scope path: "rank-on-names" do
           resources :prefixes,
                     controller: "/discourse_rank_on_names/admin_prefixes",
+                    only: %i[index create update destroy]
+          resources :drop_zone_flashes,
+                    path: "drop-zone-flashes",
+                    controller: "/discourse_rank_on_names/admin_drop_zone_flashes",
                     only: %i[index create update destroy]
         end
       end
@@ -44,6 +51,24 @@ after_initialize do
   add_to_serializer(:current_user, :rank_prefix) { ::DiscourseRankOnNames.prefix_for_user(object) }
   add_to_serializer(:user, :rank_prefix) { ::DiscourseRankOnNames.prefix_for_user(object) }
   add_to_serializer(:user_card, :rank_prefix) { ::DiscourseRankOnNames.prefix_for_user(object) }
+  add_to_serializer(:basic_user, :rank_drop_zone_flash) do
+    ::DiscourseRankOnNames.drop_zone_flash_for_user(object)
+  end
+  add_to_serializer(:post, :rank_drop_zone_flash) do
+    ::DiscourseRankOnNames.drop_zone_flash_for_user(object.user)
+  end
+  add_to_serializer(:current_user, :rank_drop_zone_flash) do
+    ::DiscourseRankOnNames.drop_zone_flash_for_user(object)
+  end
+  add_to_serializer(:user, :rank_drop_zone_flash) do
+    ::DiscourseRankOnNames.drop_zone_flash_for_user(object)
+  end
+  add_to_serializer(:user_card, :rank_drop_zone_flash) do
+    ::DiscourseRankOnNames.drop_zone_flash_for_user(object)
+  end
+  add_to_serializer(:site, :rank_drop_zone_flashes) do
+    ::DiscourseRankOnNames.site_drop_zone_flashes
+  end
 
   group_change_handler = proc { |user, group, **| ::DiscourseRankOnNames.invalidate_user(user) }
 

@@ -35,6 +35,77 @@
   }
 }
 
+.user-title[class*="user-title--"] {
+  position: relative;
+  padding-left: 22px;
+}
+
+.user-title[class*="user-title--"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  background-image: var(--rank-on-names-badge);
+}
+
+.rank-on-names-admin {
+  &__divider {
+    border: 0;
+    border-top: 1px solid var(--primary-low);
+    margin: 2em 0;
+  }
+
+  &__dzf-preview {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+  }
+
+  &__dzf-placeholder {
+    color: var(--primary-medium);
+    font-style: italic;
+  }
+
+  &__dzf-new {
+    margin-top: 2em;
+  }
+
+  &__dzf-grid {
+    display: grid;
+    gap: 0.75em;
+    align-items: center;
+
+    @media (min-width: 768px) {
+      grid-template-columns: minmax(0, 1fr) 8rem auto auto;
+    }
+
+    @media (max-width: 767px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+.rank-on-names-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+
+  &__input {
+    display: none;
+  }
+
+  &__preview {
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px var(--primary-low);
+  }
+}
+
 .rank-on-names-admin {
   margin-top: 1em;
 

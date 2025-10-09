@@ -1,7 +1,8 @@
 # Discourse Rank on Names
 
 This plugin prefixes usernames with military-style rank abbreviations based on
-the Discourse groups a user belongs to. The prefix list is now fully
+the Discourse groups a user belongs to and can also display configurable
+drop zone flash images before matching user titles. Both lists are fully
 configurable from the admin interface.
 
 ## Managing prefixes
@@ -15,6 +16,21 @@ configurable from the admin interface.
 
 Changes made from the admin page take effect immediately; caches are cleared
 automatically.
+
+## Drop zone flashes
+
+Use the **Drop zone flashes** section on the same admin screen to upload
+16x16 images that appear before matching user titles (for example
+`Company Commander` → `company-commander`). Entries are checked against the
+groups a user belongs to using the same priority order as prefixes—the first
+matching row wins. You can:
+
+1. Add, edit, or delete mappings between group/title names and uploads.
+2. Reorder entries with the optional *position* column to control precedence.
+3. Preview the configured image directly in the admin UI before saving.
+
+The client-side styles are updated automatically on the next page load after a
+change.
 
 ### Debug logging
 
@@ -44,8 +60,13 @@ If you need extra insight while debugging:
 - `lib/discourse_rank_on_names.rb` handles cache management and prefix lookup.
 - Prefix data is stored in the `rank_on_names_prefixes` table via the
   `DiscourseRankOnNames::Prefix` model.
+- Drop zone flash data is stored in the
+  `rank_on_names_drop_zone_flashes` table via the
+  `DiscourseRankOnNames::DropZoneFlash` model.
 - Administrator endpoints live under
-  `/admin/plugins/rank-on-names/prefixes` and are covered by request specs.
+  `/admin/plugins/rank-on-names/prefixes` and
+  `/admin/plugins/rank-on-names/drop-zone-flashes` and are covered by request
+  specs.
 
 Run the specs with:
 
