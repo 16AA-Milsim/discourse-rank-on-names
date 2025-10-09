@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module ::DiscourseRankOnNames
-  GROUP_PREFIXES = {
+  DEFAULT_GROUP_PREFIXES = {
     "Major" => "Maj",
     "Captain" => "Capt",
     "Lieutenant" => "Lt",
@@ -31,16 +31,18 @@ module ::DiscourseRankOnNames
     "Sergeant_Aircrew" => "SAcr",
   }.freeze
 
-  GROUP_PRIORITY = GROUP_PREFIXES.keys.freeze
   CACHE_NAMESPACE = "rank_on_names:prefix".freeze
 
   module_function
 
   def clear_cache!
     keys = Discourse.cache.keys("#{CACHE_NAMESPACE}:*")
+    keys << prefix_list_cache_key unless keys.include?(prefix_list_cache_key)
     return if keys.empty?
 
-    Discourse.redis.pipelined { |pipeline| keys.each { |key| pipeline.del(key) } }
+    Discourse.redis.pipelined do |pipeline|
+      keys.each { |key| pipeline.del(key) }
+    end
   end
 
   def prefix_for_basic_user(object)
@@ -62,15 +64,18 @@ module ::DiscourseRankOnNames
   end
 
   def group_names_for_user(user_id)
+    names_of_interest = ordered_prefixes.map(&:first)
+    return [] if names_of_interest.empty?
+
     GroupUser
       .joins(:group)
-      .where(user_id: user_id, groups: { name: GROUP_PRIORITY })
+      .where(user_id: user_id, groups: { name: names_of_interest })
       .pluck("groups.name")
   end
 
   def select_prefix(group_names)
-    GROUP_PRIORITY.each do |group_name|
-      return GROUP_PREFIXES[group_name] if group_names.include?(group_name)
+    ordered_prefixes.each do |group_name, prefix|
+      return prefix if group_names.include?(group_name)
     end
 
     nil
@@ -85,6 +90,16 @@ module ::DiscourseRankOnNames
 
   def cache_key(user_id)
     "#{CACHE_NAMESPACE}:#{user_id}"
+  end
+
+  def ordered_prefixes
+    Discourse.cache.fetch(prefix_list_cache_key) do
+      ::DiscourseRankOnNames::Prefix.ordered.pluck(:group_name, :prefix)
+    end
+  end
+
+  def prefix_list_cache_key
+    "#{CACHE_NAMESPACE}:list"
   end
 
   def extract_user_from_basic_serializer_object(object)

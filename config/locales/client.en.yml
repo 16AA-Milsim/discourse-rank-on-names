@@ -1,0 +1,22 @@
+en:
+  js:
+    rank_on_names:
+      title: "Rank on Names"
+      description: "Map Discourse groups to rank prefixes. Prefixes are applied in priority order (lowest position first)."
+      group_name: "Group name"
+      prefix: "Prefix"
+      position: "Position"
+      actions: "Actions"
+      edit: "Edit"
+      delete: "Delete"
+      delete_confirm: "Remove the prefix mapping for %{group}?"
+      save: "Save"
+      cancel: "Cancel"
+      add_heading: "Add a new prefix mapping"
+      add: "Add prefix"
+      group_placeholder: "e.g. Alpha_Squad"
+      prefix_placeholder: "e.g. Sgt"
+      position_placeholder: "Auto"
+      empty: "No prefix mappings configured yet."
+      errors:
+        missing_required_fields: "Group name and prefix are required."

@@ -25,8 +25,57 @@
   .name-username-wrapper,
   .names__primary,
   .names__secondary {
-    white-space: wrap !important;
+    white-space: normal !important;
     overflow: visible !important;
     text-overflow: clip !important;
+  }
+}
+
+.rank-on-names-admin {
+  margin-top: 1em;
+
+  &__description {
+    margin-bottom: 1em;
+  }
+
+  &__table {
+    width: 100%;
+  }
+
+  &__position,
+  &__actions {
+    width: 8rem;
+    text-align: left;
+  }
+
+  &__actions {
+    white-space: nowrap;
+
+    .btn + .btn {
+      margin-left: 0.5em;
+    }
+  }
+
+  &__empty {
+    text-align: center;
+    color: var(--primary-medium);
+  }
+
+  &__new {
+    margin-top: 2em;
+  }
+
+  &__new-grid {
+    display: grid;
+    gap: 0.75em;
+    align-items: end;
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    }
+
+    @media (max-width: 767px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 }

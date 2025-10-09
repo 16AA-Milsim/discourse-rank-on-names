@@ -7,9 +7,30 @@
 # url: https://github.com/16AA-Milsim/discourse-rank-on-names
 
 register_asset "stylesheets/common/discourse-rank-on-names.scss"
+add_admin_route "rank_on_names.title", "rank-on-names"
+
+root_path = File.expand_path("..", __FILE__)
 
 after_initialize do
   require_relative "lib/discourse_rank_on_names"
+  require_relative "app/models/discourse_rank_on_names/prefix"
+  require_relative "app/serializers/discourse_rank_on_names/prefix_serializer"
+  require_relative "app/controllers/discourse_rank_on_names/admin_prefixes_controller"
+
+  Discourse::Application.routes.append do
+    namespace :admin, constraints: StaffConstraint.new do
+      get "plugins/rank-on-names" => "admin/plugins#index",
+          as: :admin_plugins_rank_on_names
+
+      namespace :plugins do
+        scope path: "rank-on-names" do
+          resources :prefixes,
+                    controller: "/discourse_rank_on_names/admin_prefixes",
+                    only: %i[index create update destroy]
+        end
+      end
+    end
+  end
 
   ::DiscourseRankOnNames.clear_cache!
 

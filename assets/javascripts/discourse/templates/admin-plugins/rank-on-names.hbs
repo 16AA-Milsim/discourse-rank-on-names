@@ -1,0 +1,125 @@
+<div class="rank-on-names-admin">
+  <p class="rank-on-names-admin__description">
+    {{i18n "rank_on_names.description"}}
+  </p>
+
+  <div class="table-container">
+    <table class="table rank-on-names-admin__table">
+      <thead>
+        <tr>
+          <th>{{i18n "rank_on_names.group_name"}}</th>
+          <th>{{i18n "rank_on_names.prefix"}}</th>
+          <th class="rank-on-names-admin__position">
+            {{i18n "rank_on_names.position"}}
+          </th>
+          <th class="rank-on-names-admin__actions">
+            {{i18n "rank_on_names.actions"}}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#if this.prefixes.length}}
+          {{#each this.prefixes as |prefix|}}
+            <tr>
+              {{#if prefix.isEditing}}
+                <td>
+                  <Input
+                    @value={{prefix._edit.group_name}}
+                    @type="text"
+                    class="input-small"
+                    placeholder={{i18n "rank_on_names.group_placeholder"}}
+                    {{on "input" (fn this.updateEditField prefix "group_name")}}
+                  />
+                </td>
+                <td>
+                  <Input
+                    @value={{prefix._edit.prefix}}
+                    @type="text"
+                    class="input-small"
+                    placeholder={{i18n "rank_on_names.prefix_placeholder"}}
+                    {{on "input" (fn this.updateEditField prefix "prefix")}}
+                  />
+                </td>
+                <td>
+                  <Input
+                    @value={{prefix._edit.position}}
+                    @type="number"
+                    class="input-small"
+                    min="1"
+                    {{on "input" (fn this.updateEditField prefix "position")}}
+                  />
+                </td>
+                <td class="rank-on-names-admin__actions">
+                  <DButton
+                    @action={{fn this.saveEdit prefix}}
+                    @label="rank_on_names.save"
+                    @buttonClass="btn-primary btn-small"
+                  />
+                  <DButton
+                    @action={{fn this.cancelEdit prefix}}
+                    @label="rank_on_names.cancel"
+                    @buttonClass="btn-small"
+                  />
+                </td>
+              {{else}}
+                <td>{{prefix.group_name}}</td>
+                <td>{{prefix.prefix}}</td>
+                <td>{{prefix.position}}</td>
+                <td class="rank-on-names-admin__actions">
+                  <DButton
+                    @action={{fn this.startEdit prefix}}
+                    @label="rank_on_names.edit"
+                    @buttonClass="btn-small"
+                  />
+                  <DButton
+                    @action={{fn this.deletePrefix prefix}}
+                    @label="rank_on_names.delete"
+                    @buttonClass="btn-danger btn-small"
+                    @icon="trash-can"
+                  />
+                </td>
+              {{/if}}
+            </tr>
+          {{/each}}
+        {{else}}
+          <tr>
+            <td colspan="4" class="rank-on-names-admin__empty">
+              {{i18n "rank_on_names.empty"}}
+            </td>
+          </tr>
+        {{/if}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rank-on-names-admin__new">
+    <h3>{{i18n "rank_on_names.add_heading"}}</h3>
+    <div class="rank-on-names-admin__new-grid">
+      <Input
+        @value={{this.newGroupName}}
+        @type="text"
+        class="input-small"
+        placeholder={{i18n "rank_on_names.group_placeholder"}}
+      />
+      <Input
+        @value={{this.newPrefix}}
+        @type="text"
+        class="input-small"
+        placeholder={{i18n "rank_on_names.prefix_placeholder"}}
+      />
+      <Input
+        @value={{this.newPosition}}
+        @type="number"
+        class="input-small"
+        min="1"
+        placeholder={{i18n "rank_on_names.position_placeholder"}}
+      />
+      <DButton
+        @action={{this.createPrefix}}
+        @label="rank_on_names.add"
+        @buttonClass="btn-primary"
+        @disabled={{this.isSavingNew}}
+      />
+    </div>
+  </div>
+</div>
